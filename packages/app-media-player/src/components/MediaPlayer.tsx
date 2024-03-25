@@ -6,9 +6,10 @@ import type { VideoJsPlayer } from "video.js";
 
 import { defaultAttributes, Version } from "../constants";
 import { options } from "../options";
-import type { Props, Attributes, Keys } from "../types";
+import type { Props, Attributes, Keys, RTCEffectClient } from "../types";
 import { AudioExts, checkWhiteWebSdkVersion, getCurrentTime, isSafari, nextFrame } from "../utils";
 import PlayerController from "./PlayerController";
+import setupRTCEffectMixing from "./RTCEffectPlugin";
 
 export class MediaPlayer extends Component<Props> {
     render() {
@@ -337,6 +338,12 @@ class MediaPlayerImpl extends Component<ImplProps, State> {
         (window as any).player = player;
 
         player.one("loadedmetadata", this.gracefullyUpdate);
+
+        // Native RTC effect mixing check.
+        const rtcAudioEffectClient: RTCEffectClient = (window as any).__mediaPlayerAudioEffectClient;
+        if (rtcAudioEffectClient !== undefined) {
+            setupRTCEffectMixing(rtcAudioEffectClient, player, src);
+        }
 
         player.on("ready", () => {
             options.onPlayer?.(player);

@@ -1,4 +1,5 @@
 import type { AppContext } from "@netless/window-manager";
+import type { EventEmitter } from "white-web-sdk";
 
 export interface Props {
     context: AppContext<Attributes>;
@@ -28,3 +29,21 @@ export interface Attributes {
 }
 
 export type Keys = keyof Attributes;
+
+export interface RTCEffectClient extends EventEmitter {
+    getEffectsVolume: () => Promise<number>;
+    setEffectsVolume: (volume: number) => Promise<number>;
+    setVolumeOfEffect: (soundId: number, volume: number) => Promise<number>;
+    playEffect: (soundId: number, filePath: string, loopCount: number, pitch: number, pan: number, gain: number, publish: boolean, startPos: number) => Promise<number>;
+    stopEffect: (soundId: number) => Promise<number>;
+    stopAllEffects: () => Promise<number>;
+    preloadEffect: (soundId: number, filePath: string, startPos: number) => Promise<number>;
+    unloadEffect: (soundId: number) => Promise<number>;
+    pauseEffect: (soundId: number) => Promise<number>;
+    pauseAllEffects: () => Promise<number>;
+    resumeEffect: (soundId: number) => Promise<number>;
+    resumeAllEffects: () => Promise<number>;
+    getEffectDuration: (url: string) => Promise<number>;
+    setEffectPosition: (soundId: number, pos: number) => Promise<number>;
+    getEffectCurrentPosition: (soundId: number) => Promise<number>;
+}
