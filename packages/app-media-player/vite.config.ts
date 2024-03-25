@@ -12,13 +12,13 @@ export default defineConfig(({ command, mode }) => {
                 fileName: "main",
                 name: "NetlessAppMediaPlayer",
             },
-            sourcemap: isProd,
+            sourcemap: !isProd,
             outDir: "dist",
             rollupOptions: {
                 external: ["@netless/window-manager", "react", "react-dom", "video.js"],
                 output: { exports: "named" },
             },
-            minify: isProd,
+            minify: false,
         },
     };
 });
