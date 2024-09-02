@@ -59,6 +59,10 @@ export default function setupRTCEffectMixing(rtcAudioEffectClient: RTCEffectClie
         rtcAudioEffectClient.addListener('effectFinished', (soundId: number) => {
             debug(">>> Finished", { soundId });
             activeRTCEffectStates[soundId].playState = RTCEffectPlayState.Idle;
+            activeRTCEffectStates[soundId].previousVideoJSAdvance = 0;
+            activeRTCEffectStates[soundId].previousSeekTargetTime = 0;
+            activeRTCEffectStates[soundId].previousBeginSeekTime = 0;
+            activeRTCEffectStates[soundId].seekEnable = false;
         });
 
         player.on("play", () => {
