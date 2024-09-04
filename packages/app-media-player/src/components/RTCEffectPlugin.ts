@@ -69,13 +69,13 @@ export default function setupRTCEffectMixing(rtcAudioEffectClient: RTCEffectClie
             const currenState = activeRTCEffectStates[playingId].playState;
             switch (currenState) {
                 case RTCEffectPlayState.Idle:
+                    debug(">>> Start play", { playingId });
                     rtcAudioEffectClient.playEffect(playingId, src, 0, 1, 0, 100, false, 0)
                         .then(() => {
                             debug(">>> Play Success", { playingId });
                             activeRTCEffectStates[playingId].seekEnable = true;
                         });
                     activeRTCEffectStates[playingId].playState = RTCEffectPlayState.Playing;
-                    debug(">>> Start play", { playingId });
                     break;
                 case RTCEffectPlayState.Paused:
                     rtcAudioEffectClient.resumeEffect(playingId);
@@ -90,9 +90,9 @@ export default function setupRTCEffectMixing(rtcAudioEffectClient: RTCEffectClie
             const currenState = activeRTCEffectStates[playingId].playState;
             switch (currenState) {
                 case RTCEffectPlayState.Playing:
+                    debug(">>> Pause play", { playingId });
                     rtcAudioEffectClient.pauseEffect(playingId);
                     activeRTCEffectStates[playingId].playState = RTCEffectPlayState.Paused;
-                    debug(">>> Pause play", { playingId });
                     break;
                 default:  // Can't pause before play due to the limitation of native rtc effect. So we just ignore the pause event.
                     break;
@@ -107,10 +107,12 @@ export default function setupRTCEffectMixing(rtcAudioEffectClient: RTCEffectClie
                         const state = activeRTCEffectStates[playingId];
                         const rtcEffectTime = rtcEffectMSTime / 1000;
                         const isSeeking = state.previousSeekTargetTime !== 0 && state.previousBeginSeekTime !== 0;
+                        debug(">>> getEffectCurrentPosition", { playingId, rtcEffectTime, isSeeking });
                         if (isSeeking && rtcEffectTime < state.previousSeekTargetTime) { // Reject all update event when rtc effect is seeking.
                             return
                         }
                         if (state.playState !== RTCEffectPlayState.Playing) { // Get effect postion is async, so we need to check the play state again. Only playing should be cared.
+                            debug(">>> Skip timeupdate", { playingId, state: state.playState });
                             return;
                         }
                         function startRTCEffectSeek(second: number, id: number) {
