@@ -41,11 +41,17 @@ function debug(msg: string, ...args: any[]) {
 
 export default function setupRTCEffectMixing(rtcAudioEffectClient: RTCEffectClient, player: VideoJsPlayer, src: string) {
     player.one("ready", () => {
-        // Force mute js player to avoid echo.
-        player.muted(true);
-        // Hook js player mute event so the player wont be muted during native rtc effect mixing.
-        player.muted = (i: boolean | void): boolean => {
-            return false;
+        const src = (player as any)?.tagAttributes?.src || "";
+        const isAudio = src.endsWith("mp3") || src.endsWith("wav") || src.endsWith("m4a");
+        // Because mute audio will lead to a videojs error. So we should avoid mute audio. But it will lead to echo. Anyway...
+        if (!isAudio) {
+            debug(">>> Mute js player", { src });
+            // Force mute js player to avoid echo.
+            player.muted(true);
+            // Hook js player mute event so the player wont be muted during native rtc effect mixing.
+            player.muted = (i: boolean | void): boolean => {
+                return false;
+            }
         }
         const playingId = createRTCEffectObject();
         debug(">>> Setup", { playingId, src });
