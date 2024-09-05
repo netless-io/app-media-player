@@ -12,7 +12,6 @@ function createRTCEffectObject(): number {
         previousVideoJSAdvance: 0,
         previousSeekTargetTime: 0,
         previousBeginSeekTime: 0,
-        seekEnable: false
     };
     activeRTCEffectStates[playingId] = state;
     return playingId;
@@ -30,7 +29,6 @@ interface RTCEffectState {
     previousVideoJSAdvance: number;
     previousSeekTargetTime: number;
     previousBeginSeekTime: number;
-    seekEnable: boolean;
 }
 
 function debug(msg: string, ...args: any[]) {
@@ -40,6 +38,25 @@ function debug(msg: string, ...args: any[]) {
 }
 
 export default function setupRTCEffectMixing(rtcAudioEffectClient: RTCEffectClient, player: VideoJsPlayer, src: string) {
+    function playEffectId(playingId: number) {
+        if (activeRTCEffectStates[playingId].playState !== RTCEffectPlayState.Idle) {
+            debug(">>> Skip Play", { playingId, state: activeRTCEffectStates[playingId].playState });
+            return
+        }
+        rtcAudioEffectClient.playEffect(playingId, src, 0, 1, 0, 100, false, 0)
+            .then(() => {
+                debug(">>> Play Success", { playingId });
+            });
+        activeRTCEffectStates[playingId].playState = RTCEffectPlayState.Playing;
+    }
+
+    function resetEffectState(playingId: number) {
+        activeRTCEffectStates[playingId].playState = RTCEffectPlayState.Idle;
+        activeRTCEffectStates[playingId].previousVideoJSAdvance = 0;
+        activeRTCEffectStates[playingId].previousSeekTargetTime = 0;
+        activeRTCEffectStates[playingId].previousBeginSeekTime = 0;
+    }
+
     player.one("ready", () => {
         const src = (player as any)?.tagAttributes?.src || "";
         const isAudio = src.endsWith("mp3") || src.endsWith("wav") || src.endsWith("m4a");
@@ -60,33 +77,23 @@ export default function setupRTCEffectMixing(rtcAudioEffectClient: RTCEffectClie
 
         rtcAudioEffectClient.addListener("error", (soundId) => {
             debug(">>> Error", { soundId });
-            activeRTCEffectStates[soundId].playState = RTCEffectPlayState.Idle;
+            resetEffectState(soundId);
         });
         rtcAudioEffectClient.addListener('effectFinished', (soundId: number) => {
             debug(">>> Finished", { soundId });
-            activeRTCEffectStates[soundId].playState = RTCEffectPlayState.Idle;
-            activeRTCEffectStates[soundId].previousVideoJSAdvance = 0;
-            activeRTCEffectStates[soundId].previousSeekTargetTime = 0;
-            activeRTCEffectStates[soundId].previousBeginSeekTime = 0;
-            activeRTCEffectStates[soundId].seekEnable = false;
+            resetEffectState(soundId);
         });
-
         player.on("play", () => {
             const currenState = activeRTCEffectStates[playingId].playState;
             switch (currenState) {
                 case RTCEffectPlayState.Idle:
                     debug(">>> Start play", { playingId });
-                    rtcAudioEffectClient.playEffect(playingId, src, 0, 1, 0, 100, false, 0)
-                        .then(() => {
-                            debug(">>> Play Success", { playingId });
-                            activeRTCEffectStates[playingId].seekEnable = true;
-                        });
-                    activeRTCEffectStates[playingId].playState = RTCEffectPlayState.Playing;
+                    playEffectId(playingId);
                     break;
                 case RTCEffectPlayState.Paused:
+                    debug(">>> Resume play", { playingId });
                     rtcAudioEffectClient.resumeEffect(playingId);
                     activeRTCEffectStates[playingId].playState = RTCEffectPlayState.Playing;
-                    debug(">>> Resume play", { playingId });
                     break;
                 default:
                     break;
@@ -101,68 +108,112 @@ export default function setupRTCEffectMixing(rtcAudioEffectClient: RTCEffectClie
                     activeRTCEffectStates[playingId].playState = RTCEffectPlayState.Paused;
                     break;
                 default:  // Can't pause before play due to the limitation of native rtc effect. So we just ignore the pause event.
+                    debug(">>> Skip Pause", { playingId, currenState });
                     break;
             }
         });
+        // player.on("ended", () => {
+        //     const currenState = activeRTCEffectStates[playingId].playState;
+        //     switch (currenState) {
+        //         case RTCEffectPlayState.Playing:
+        //         case RTCEffectPlayState.Paused:
+        //             // <<End event>>
+        //             // Player ended. We should seek to 0.
+        //             rtcAudioEffectClient
+        //                 .getEffectCurrentPosition(playingId)
+        //                 .then((rtcEffectMSTime: number) => {
+        //                     if (rtcEffectMSTime > 0) {
+        //                         const s = activeRTCEffectStates[playingId].playState;
+        //                         switch (s) {
+        //                             case RTCEffectPlayState.Playing:
+        //                             case RTCEffectPlayState.Paused:
+        //                                 debug(">>> Found player ended Seek to 0 ", { playingId, state: s });
+        //                                 rtcAudioEffectClient.setEffectPosition(playingId, 0);
+        //                             default:
+        //                                 break;
+        //                         }
+        //                     }
+        //                 })
+        //         default:
+        //             break
+        //     }
+        // });
         player.on("timeupdate", () => { // RTC native clien time unit is millisecond. JS player time unit is second.
             const state = activeRTCEffectStates[playingId];
-            if (state.playState === RTCEffectPlayState.Playing && state.seekEnable) {
-                rtcAudioEffectClient
-                    .getEffectCurrentPosition(playingId)
-                    .then((rtcEffectMSTime: number) => {
-                        const state = activeRTCEffectStates[playingId];
-                        const rtcEffectTime = rtcEffectMSTime / 1000;
-                        const isSeeking = state.previousSeekTargetTime !== 0 && state.previousBeginSeekTime !== 0;
-                        debug(">>> getEffectCurrentPosition", { playingId, rtcEffectTime, isSeeking });
-                        if (isSeeking && rtcEffectTime < state.previousSeekTargetTime) { // Reject all update event when rtc effect is seeking.
-                            return
+            // debug(">>> timeupdate", { playingId, state: state.playState, jsSecond: player.currentTime() });
+            rtcAudioEffectClient
+                .getEffectCurrentPosition(playingId)
+                .then((rtcEffectMSTime: number) => {
+                    const state = activeRTCEffectStates[playingId];
+                    const rtcEffectTime = rtcEffectMSTime / 1000;
+                    const jsPlayerTime = player.currentTime();
+                    const isSeeking = state.previousSeekTargetTime !== 0 && state.previousBeginSeekTime !== 0;
+                    debug(`>>> EffectSecond rtc: ${rtcEffectTime} js: ${jsPlayerTime} seeking: ${isSeeking}`, { playingId });
+                    if (state.playState == RTCEffectPlayState.Idle) {
+                        if (!player.paused()) {
+                            debug(">>> Play effect due to time update.", { playingId });
+                            playEffectId(playingId);
                         }
-                        if (state.playState !== RTCEffectPlayState.Playing) { // Get effect postion is async, so we need to check the play state again. Only playing should be cared.
-                            debug(">>> Skip timeupdate", { playingId, state: state.playState });
-                            return;
-                        }
-                        function startRTCEffectSeek(second: number, id: number) {
-                            rtcAudioEffectClient.setEffectPosition(id, second * 1000);
-                            state.previousBeginSeekTime = Date.now() / 1000;
-                            state.previousSeekTargetTime = second;
-                        }
-                        const previousBeginSeekTime = state.previousBeginSeekTime;
-                        if (rtcEffectMSTime > 0) {
-                            const jsPlayerTime = player.currentTime();
-                            const jsPlayerTimerAdvance = jsPlayerTime - rtcEffectTime;
-                            const absAdvance = Math.abs(jsPlayerTimerAdvance);
-                            const rtcLagTolerance = 0.5;
-                            if (absAdvance > rtcLagTolerance) { // Once the lag is larger than the tolerance, we should do something.
-                                if (isSeeking) { // Lagging from seeking.
-                                    const lastSeekingCost = (Date.now() / 1000) - previousBeginSeekTime;
-                                    const rtcEffectLag = jsPlayerTimerAdvance > 0 ? jsPlayerTimerAdvance : 0; // If rtc is advance, we should not correct it. It just means we seek too much.
-                                    const estimatedRTCLag = lastSeekingCost + rtcEffectLag;
-                                    const targetRTCSeekTime = jsPlayerTime + estimatedRTCLag;
-                                    startRTCEffectSeek(targetRTCSeekTime, playingId);
-                                    debug(">>> seeking after seeking lag", { jsPlayerTime, rtcEffectTime, jsPlayerTimerAdvance, lastSeekingCost, estimatedRTCLag, targetRTCSeekTime });
-                                } else {
-                                    if (absAdvance > 10) { // If the lag is too large, we should seek directly.
-                                        startRTCEffectSeek(jsPlayerTime, playingId);
-                                        debug(">>> direct seek", { jsPlayerTime, rtcEffectTime, jsPlayerTimerAdvance });
-                                    } else { // Here is the normal lagging case.
-                                        const previousAdvance = state.previousVideoJSAdvance;
-                                        const estimatedRTCLag = Math.max(previousAdvance + jsPlayerTimerAdvance, 0);
-                                        const targetRTCSeekTime = jsPlayerTime + estimatedRTCLag;
-                                        state.previousVideoJSAdvance = estimatedRTCLag;
-                                        startRTCEffectSeek(targetRTCSeekTime, playingId);
-                                        debug(">>> normal lag seeking", { jsPlayerTime, rtcEffectTime, jsPlayerTimerAdvance, previousAdvance, estimatedRTCLag, targetRTCSeekTime });
-                                    }
-                                }
+                        return;
+                    }
+                    // if (state.playState == RTCEffectPlayState.Paused) {
+                    //     // <<End event>>
+                    //     // This behavior is: 
+                    //     // jsplayer seek to 0, and pause.
+                    //     // So js player will send a "timeupdate" event when player state is playing and jstime is 0.
+                    //     const jsPlayerTime = player.currentTime();
+                    //     if (jsPlayerTime === 0 && rtcEffectTime > 0) {
+                    //         debug(">>> Special event. JS player time is 0. RTC paused. Seek rtc to 0", { playingId, rtcEffectMSTime });
+                    //         rtcAudioEffectClient.setEffectPosition(playingId, 0);
+                    //     }
+                    //     return;
+                    // }
+                    // Reject all update event when rtc effect is seeking.
+                    if (isSeeking && rtcEffectTime < state.previousSeekTargetTime) { return }
+                    if (state.playState !== RTCEffectPlayState.Playing) { // Get effect postion is async, so we need to check the play state again. Only playing should be cared.)
+                        debug(">>> Skip timupdate", { playingId, state: state.playState, jsTime: player.currentTime(), rtcEffectTime });
+                        return;
+                    }
+                    function startRTCEffectSeek(second: number, id: number) {
+                        rtcAudioEffectClient.setEffectPosition(id, second * 1000);
+                        state.previousBeginSeekTime = Date.now() / 1000;
+                        state.previousSeekTargetTime = second;
+                    }
+                    const previousBeginSeekTime = state.previousBeginSeekTime;
+                    if (rtcEffectMSTime > 0) {
+                        const jsPlayerTimerAdvance = jsPlayerTime - rtcEffectTime;
+                        const absAdvance = Math.abs(jsPlayerTimerAdvance);
+                        const rtcLagTolerance = 0.5;
+                        if (absAdvance > rtcLagTolerance) { // Once the lag is larger than the tolerance, we should do something.
+                            if (isSeeking) { // Lagging from seeking.
+                                const lastSeekingCost = (Date.now() / 1000) - previousBeginSeekTime;
+                                const rtcEffectLag = jsPlayerTimerAdvance > 0 ? jsPlayerTimerAdvance : 0; // If rtc is advance, we should not correct it. It just means we seek too much.
+                                const estimatedRTCLag = lastSeekingCost + rtcEffectLag;
+                                const targetRTCSeekTime = jsPlayerTime + estimatedRTCLag;
+                                startRTCEffectSeek(targetRTCSeekTime, playingId);
+                                debug(">>> Start seeking after seeking lag", { jsPlayerTime, rtcEffectTime, jsPlayerTimerAdvance, lastSeekingCost, estimatedRTCLag, targetRTCSeekTime });
                             } else {
-                                if (isSeeking) {
-                                    debug(">>> seeking finished with no log", { jsPlayerTime, rtcEffectTime, jsPlayerTimerAdvance, previousBeginSeekTime, rtcLagTolerance });
-                                    state.previousBeginSeekTime = 0;
-                                    state.previousSeekTargetTime = 0;
+                                if (absAdvance > 10) { // If the lag is too large, we should seek directly.
+                                    startRTCEffectSeek(jsPlayerTime, playingId);
+                                    debug(">>> DirectSeek", { time: jsPlayerTime, rtcEffectTime, jsPlayerTimerAdvance });
+                                } else { // Here is the normal lagging case.
+                                    const previousAdvance = state.previousVideoJSAdvance;
+                                    const estimatedRTCLag = Math.max(previousAdvance + jsPlayerTimerAdvance, 0);
+                                    const targetRTCSeekTime = jsPlayerTime + estimatedRTCLag;
+                                    state.previousVideoJSAdvance = estimatedRTCLag;
+                                    startRTCEffectSeek(targetRTCSeekTime, playingId);
+                                    debug(">>> Start seeking with lag", { jsPlayerTime, rtcEffectTime, jsPlayerTimerAdvance, previousAdvance, estimatedRTCLag, targetRTCSeekTime });
                                 }
                             }
+                        } else {
+                            if (isSeeking) {
+                                debug(">>> SeekingFinish no lag", { jsPlayerTime, rtcEffectTime, jsPlayerTimerAdvance, previousBeginSeekTime, rtcLagTolerance });
+                                state.previousBeginSeekTime = 0;
+                                state.previousSeekTargetTime = 0;
+                            }
                         }
-                    });
-            }
+                    }
+                });
         });
         player.on("dispose", () => {
             const currentState = activeRTCEffectStates[playingId].playState;
