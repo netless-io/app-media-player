@@ -23,7 +23,8 @@
         "types": "cross-env NODE_ENV=production tsc --declaration --emitDeclarationOnly --outDir dist",
         "build": "vite build && yarn run types",
         "build:dev": "vite build --mode development && yarn run types",
-        "cleanup": "rimraf ./build"
+        "cleanup": "rimraf ./build",
+        "localIntegrate": "i=$(pwd) && yarn build:dev && cd /Users/xuyunshi/window-manager && pnpm run localbuild && cd /Users/xuyunshi/Desktop/Whiteboard/Whiteboard-bridge && yarn run testLocalWindowManager"
     },
     "devDependencies": {
         "lodash-es": "^4.17.21",
