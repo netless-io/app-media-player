@@ -186,19 +186,21 @@ export default function setupRTCEffectMixing(rtcAudioEffectClient: RTCEffectClie
                         const rtcLagTolerance = 0.5;
                         if (absAdvance > rtcLagTolerance) { // Once the lag is larger than the tolerance, we should do something.
                             if (isSeeking) { // Lagging from seeking.
+                                const timeElapse = state.previousSeekTargetTime - rtcEffectTime;
                                 const lastSeekingCost = (Date.now() / 1000) - previousBeginSeekTime;
                                 const rtcEffectLag = jsPlayerTimerAdvance > 0 ? jsPlayerTimerAdvance : 0; // If rtc is advance, we should not correct it. It just means we seek too much.
                                 const estimatedRTCLag = lastSeekingCost + rtcEffectLag;
                                 const targetRTCSeekTime = jsPlayerTime + estimatedRTCLag;
                                 startRTCEffectSeek(targetRTCSeekTime, playingId);
-                                debug(">>> Start seeking after seeking lag", { jsPlayerTime, rtcEffectTime, jsPlayerTimerAdvance, lastSeekingCost, estimatedRTCLag, targetRTCSeekTime });
+                                debug(">>> Start seeking after seeking lag", { jsPlayerTime, rtcEffectTime, jsPlayerTimerAdvance, lastSeekingCost, estimatedRTCLag, targetRTCSeekTime, previousBeginSeekTime, timeElapse });
                             } else {
                                 if (absAdvance > 10) { // If the lag is too large, we should seek directly.
                                     startRTCEffectSeek(jsPlayerTime, playingId);
                                     debug(">>> DirectSeek", { time: jsPlayerTime, rtcEffectTime, jsPlayerTimerAdvance });
                                 } else { // Here is the normal lagging case.
                                     const previousAdvance = state.previousVideoJSAdvance;
-                                    const estimatedRTCLag = Math.max(previousAdvance + jsPlayerTimerAdvance, 0);
+                                    // Specially, the first seeking forced to be 0.
+                                    const estimatedRTCLag = 0;
                                     const targetRTCSeekTime = jsPlayerTime + estimatedRTCLag;
                                     state.previousVideoJSAdvance = estimatedRTCLag;
                                     startRTCEffectSeek(targetRTCSeekTime, playingId);
