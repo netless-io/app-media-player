@@ -37,4 +37,6 @@ export function getTimestamp(props: { player?: Player; room?: Room }) {
 
 export const isSafari = navigator.userAgent.includes("Safari");
 
+export const isiOS = navigator.userAgent.includes("iPhone") || navigator.userAgent.includes("iPad");
+
 export const AudioExts = [".aac", ".mid", ".midi", ".mp3", ".ogg", ".oga", ".wav", ".weba"];

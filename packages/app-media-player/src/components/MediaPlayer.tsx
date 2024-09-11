@@ -7,7 +7,7 @@ import type { VideoJsPlayer } from "video.js";
 import { defaultAttributes, Version } from "../constants";
 import { options } from "../options";
 import type { Props, Attributes, Keys, RTCEffectClient } from "../types";
-import { AudioExts, checkWhiteWebSdkVersion, getCurrentTime, isSafari, nextFrame } from "../utils";
+import { AudioExts, checkWhiteWebSdkVersion, getCurrentTime, isiOS, isSafari, nextFrame } from "../utils";
 import PlayerController from "./PlayerController";
 import setupRTCEffectMixing from "./RTCEffectPlugin";
 
@@ -60,6 +60,7 @@ class MediaPlayerImpl extends Component<ImplProps, State> {
     retryCount = 0;
     decreaseRetryTimer = 0;
     noSoundSyncCount = 0;
+    everPlayed = false;
 
     constructor(props: ImplProps) {
         super(props);
@@ -223,6 +224,7 @@ class MediaPlayerImpl extends Component<ImplProps, State> {
                 player.pause();
             } else {
                 player.play()?.catch(this.catchPlayFail);
+                this.everPlayed = true;
             }
         }
 
@@ -247,6 +249,14 @@ class MediaPlayerImpl extends Component<ImplProps, State> {
             this.resetPlayer();
         } else if (Math.abs(player.currentTime() - currentTime) > maxError) {
             this.debug("<<< currentTime -> %o", currentTime);
+            if (isiOS) {
+                if (this.everPlayed) {
+                    player.currentTime(currentTime);
+                } else[
+                    this.debug("<<< ignore iOS idle time update. -> %o (ignored)", currentTime),
+                ]
+                return;
+            }
             player.currentTime(currentTime);
         }
     };
