@@ -21,10 +21,6 @@
   resolved "https://registry.npmjs.org/@juggle/resize-observer/-/resize-observer-3.3.1.tgz"
   integrity sha512-zMM9Ds+SawiUkakS7y94Ymqx+S0ORzpG3frZirN3l+UlXUmSUR7hF4wxCVqW+ei94JzV5kt0uXBcoOEAuiydrw==
 
-"@netless/app-audio-player@file:/Users/xuyunshi/app-media-player/packages/app-audio-player":
-  version "0.1.0"
-  resolved "file:packages/app-audio-player"
-
 "@netless/app-docs-viewer@^0.1.15":
   version "0.1.15"
   resolved "https://registry.npmjs.org/@netless/app-docs-viewer/-/app-docs-viewer-0.1.15.tgz"
@@ -46,16 +42,6 @@
   resolved "https://registry.npmjs.org/@netless/app-media-player/-/app-media-player-0.1.0-beta.4.tgz"
   integrity sha512-mwBrhITav9moFRS9lGmsWnLN1jBJhTjEfnQAVyLCjQvrzGGvZl+bakTSLhaazWvmdbo/V9YKoP0JlbytwAMHlg==
 
-"@netless/app-media-player@file:/Users/xuyunshi/app-media-player/packages/app-media-player":
-  version "0.1.0-beta.10"
-  resolved "file:packages/app-media-player"
-
-"@netless/app-todo-svelte@file:/Users/xuyunshi/app-media-player/packages/app-todo-svelte":
-  version "0.1.0"
-  resolved "file:packages/app-todo-svelte"
-  dependencies:
-    svelte "^3.42.3"
-
 "@netless/canvas-polyfill@^0.0.4":
   version "0.0.4"
   resolved "https://registry.npmjs.org/@netless/canvas-polyfill/-/canvas-polyfill-0.0.4.tgz"
@@ -69,6 +55,19 @@
     eventemitter3 "^4.0.7"
     stylefire "^7.0.3"
 
+"@netless/window-manager@0.1.41":
+  version "0.1.41"
+  resolved "https://registry.npmjs.org/@netless/window-manager/-/window-manager-0.1.41.tgz"
+  integrity sha512-FIJEYIP3yzAqJwFnGCunD70+2iVs8RpVEhWV1uqS05XyH+IWpgBFplmZzB4vAcVOuOWn4mGoGClcMfuUFUL/Nw==
+  dependencies:
+    "@netless/app-docs-viewer" "^0.1.15"
+    "@netless/app-media-player" "0.1.0-beta.4"
+    "@netless/telebox-insider" "^0.1.14"
+    emittery "^0.9.2"
+    lodash-es "^4.17.21"
+    nanoid "^3.1.25"
+    video.js ">=7"
+
 "@netless/window-manager@^0.1.49":
   version "0.1.49"
   resolved "https://registry.npmjs.org/@netless/window-manager/-/window-manager-0.1.49.tgz"
@@ -78,19 +77,6 @@
     "@netless/app-docs-viewer" "^0.1.17"
     "@netless/app-media-player" "0.1.0-beta.4"
     "@netless/telebox-insider" "^0.1.15"
-    emittery "^0.9.2"
-    lodash-es "^4.17.21"
-    nanoid "^3.1.25"
-    video.js ">=7"
-
-"@netless/window-manager@0.1.41":
-  version "0.1.41"
-  resolved "https://registry.npmjs.org/@netless/window-manager/-/window-manager-0.1.41.tgz"
-  integrity sha512-FIJEYIP3yzAqJwFnGCunD70+2iVs8RpVEhWV1uqS05XyH+IWpgBFplmZzB4vAcVOuOWn4mGoGClcMfuUFUL/Nw==
-  dependencies:
-    "@netless/app-docs-viewer" "^0.1.15"
-    "@netless/app-media-player" "0.1.0-beta.4"
-    "@netless/telebox-insider" "^0.1.14"
     emittery "^0.9.2"
     lodash-es "^4.17.21"
     nanoid "^3.1.25"
@@ -207,15 +193,15 @@
   resolved "https://registry.npmjs.org/@types/long/-/long-4.0.1.tgz"
   integrity sha512-5tXH6Bx/kNGd3MgffdmP4dy2Z+G4eaXw0SE81Tq3BNadtnMR5/ySMzX4SLEzHJzSmPNn4HIdpQsBvXMUykr58w==
 
-"@types/node@^16.7.6":
-  version "16.7.6"
-  resolved "https://registry.npmjs.org/@types/node/-/node-16.7.6.tgz"
-  integrity sha512-VESVNFoa/ahYA62xnLBjo5ur6gPsgEE5cNRy8SrdnkZ2nwJSW0kJ4ufbFr2zuU9ALtHM8juY53VcRoTA7htXSg==
-
 "@types/node@>=13.7.0":
   version "16.6.1"
   resolved "https://registry.npmjs.org/@types/node/-/node-16.6.1.tgz"
   integrity sha512-Sr7BhXEAer9xyGuCN3Ek9eg9xPviCF2gfu9kTfuU2HkTVAMYSDeX40fvpmo72n5nansg3nsBjuQBrsS28r+NUw==
+
+"@types/node@^16.7.6":
+  version "16.7.6"
+  resolved "https://registry.npmjs.org/@types/node/-/node-16.7.6.tgz"
+  integrity sha512-VESVNFoa/ahYA62xnLBjo5ur6gPsgEE5cNRy8SrdnkZ2nwJSW0kJ4ufbFr2zuU9ALtHM8juY53VcRoTA7htXSg==
 
 "@types/prop-types@*":
   version "15.7.4"
@@ -355,15 +341,15 @@ color-convert@^1.9.3:
   dependencies:
     color-name "1.1.3"
 
-color-name@^1.0.0:
-  version "1.1.4"
-  resolved "https://registry.npmjs.org/color-name/-/color-name-1.1.4.tgz"
-  integrity sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==
-
 color-name@1.1.3:
   version "1.1.3"
   resolved "https://registry.npmjs.org/color-name/-/color-name-1.1.3.tgz"
   integrity sha1-p9BVi9icQveV3UIyj3QIMcpTvCU=
+
+color-name@^1.0.0:
+  version "1.1.4"
+  resolved "https://registry.npmjs.org/color-name/-/color-name-1.1.4.tgz"
+  integrity sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==
 
 color-string@^1.6.0:
   version "1.6.0"
@@ -756,7 +742,7 @@ mobx-react@^7.2.0:
   dependencies:
     mobx-react-lite "^3.2.0"
 
-mobx@^6.1.0, mobx@^6.3.2:
+mobx@^6.3.2:
   version "6.3.2"
   resolved "https://registry.npmjs.org/mobx/-/mobx-6.3.2.tgz"
   integrity sha512-xGPM9dIE1qkK9Nrhevp0gzpsmELKU4MFUJRORW/jqxVFIHHWIoQrjDjL8vkwoJYY3C2CeVJqgvl38hgKTalTWg==
@@ -831,17 +817,6 @@ pkcs7@^1.0.4:
   integrity sha512-afRERtHn54AlwaF2/+LFszyAANTCggGilmcmILUzEjvs3XgFZT+xE6+QWQcAGmu4xajy+Xtj7acLOPdx5/eXWQ==
   dependencies:
     "@babel/runtime" "^7.5.5"
-
-"playground@file:/Users/xuyunshi/app-media-player/packages/playground":
-  version "0.1.0"
-  resolved "file:packages/playground"
-  dependencies:
-    "@netless/window-manager" "0.1.41"
-    react "^17.0.2"
-    react-dom "^17.0.2"
-    regenerator-runtime "^0.13.9"
-    video.js "^7.14.3"
-    white-web-sdk "^2.13.19"
 
 postcss@^8.3.6:
   version "8.3.6"
@@ -923,7 +898,7 @@ react-is@^16.8.1:
   resolved "https://registry.npmjs.org/react-is/-/react-is-16.13.1.tgz"
   integrity sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==
 
-react@^16.14.0, react@^16.8.0, "react@^16.8.0 || ^17":
+react@^16.8.0:
   version "16.14.0"
   resolved "https://registry.npmjs.org/react/-/react-16.14.0.tgz"
   integrity sha512-0X2CImDkJGApiAlcf0ODKIneSwBPhqJawOa5wCtKbu7ZECrmS26NvtSILynQ66cgkT/RJ4LidJOc3bUESwmU8g==
@@ -936,12 +911,6 @@ react@^17.0.2:
   version "17.0.2"
   resolved "https://registry.npmjs.org/react/-/react-17.0.2.tgz"
   integrity sha512-gnhPt75i/dq/z3/6q/0asP78D0u592D5L1pd7M8P+dck6Fu/jJeL6iVVK23fptSUZj8Vjf++7wXA8UNclGQcbA==
-  dependencies:
-    loose-envify "^1.1.0"
-    object-assign "^4.1.1"
-
-react@17.0.2:
-  version "17.0.2"
   dependencies:
     loose-envify "^1.1.0"
     object-assign "^4.1.1"
@@ -1100,7 +1069,7 @@ svelte-hmr@^0.14.7:
   resolved "https://registry.npmjs.org/svelte-hmr/-/svelte-hmr-0.14.7.tgz"
   integrity sha512-pDrzgcWSoMaK6AJkBWkmgIsecW0GChxYZSZieIYfCP0v2oPyx2CYU/zm7TBIcjLVUPP714WxmViE9Thht4etog==
 
-svelte@^3.34.0, svelte@^3.42.3, svelte@>=3.19.0:
+svelte@^3.42.3:
   version "3.42.3"
   resolved "https://registry.npmjs.org/svelte/-/svelte-3.42.3.tgz"
   integrity sha512-pbdtdNZEx2GBqSM6XEgPoHbwtvWBwFLt/1bRmzsyXZO+i424wFnPe7O5B3GOJDPFSxPRztumAW3mL5LPzecWUg==
@@ -1160,7 +1129,7 @@ vanilla-lazyload@^17.4.0:
   resolved "https://registry.npmjs.org/vanilla-lazyload/-/vanilla-lazyload-17.4.0.tgz"
   integrity sha512-4IVX93uLEgQGBdSCaSE1XJgeNNT1+sV8PKiImM21EkDGJBH3tTWL9wYrMA4xT5C2EIEfw8WkinUxUG+uMY2ZyA==
 
-"video.js@^6 || ^7", video.js@^7.14.3, video.js@>=7:
+video.js@>=7, "video.js@^6 || ^7", video.js@^7.14.3:
   version "7.14.3"
   resolved "https://registry.npmjs.org/video.js/-/video.js-7.14.3.tgz"
   integrity sha512-6avCdSIfn5ss5NOgoQfY/xEfPNcz9DXSw+ZN80NwPguCdRd4VL4y40b/d7osYJwyCdF+YkvhqAW7dw4s0vBigg==
@@ -1191,7 +1160,7 @@ videojs-vtt.js@^0.15.3:
   dependencies:
     global "^4.3.1"
 
-vite@^2.3.7, vite@^2.5.1:
+vite@^2.5.1:
   version "2.5.1"
   resolved "https://registry.npmjs.org/vite/-/vite-2.5.1.tgz"
   integrity sha512-FwmLbbz8MB1pBs9dKoRDgpiqoijif8hSK1+NNUYc12/cnf+pM2UFhhQ1rcpXgbMhm/5c2USZdVAf0FSkSxaFDA==
@@ -1210,7 +1179,7 @@ which@^2.0.1:
   dependencies:
     isexe "^2.0.0"
 
-white-web-sdk@^2.13.16, white-web-sdk@^2.13.19:
+white-web-sdk@^2.13.19:
   version "2.13.19"
   resolved "https://registry.npmjs.org/white-web-sdk/-/white-web-sdk-2.13.19.tgz"
   integrity sha512-hIV59tvIPUOeGVlqDIp7bb7HilPYJfvMH6Op3Od6yauOR3ss18E1ftaDN+qPn3Ys7A+FkvP1BwKNkYezHiQ5mw==
