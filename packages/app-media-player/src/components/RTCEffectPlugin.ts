@@ -1,6 +1,7 @@
 import { options } from "../options";
 import { RTCEffectClient } from "../types";
 import type { VideoJsPlayer } from "video.js";
+import { AudioExts } from "../utils";
 
 let assignableRtcEffectId = 99999;
 // Create a new effect object and return the id.
@@ -59,7 +60,7 @@ export default function setupRTCEffectMixing(rtcAudioEffectClient: RTCEffectClie
 
     player.one("ready", () => {
         const src = (player as any)?.tagAttributes?.src || "";
-        const isAudio = src.endsWith("mp3") || src.endsWith("wav") || src.endsWith("m4a");
+        const isAudio = AudioExts.includes(("." + src.split(".").pop()) || "");
         // Because mute audio will lead to a videojs error. So we should avoid mute audio. But it will lead to echo. Anyway...
         if (!isAudio) {
             debug(">>> Mute js player", { src });
