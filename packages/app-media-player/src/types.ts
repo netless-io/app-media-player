@@ -47,3 +47,7 @@ export interface RTCEffectClient extends EventEmitter {
     setEffectPosition: (soundId: number, pos: number) => Promise<number>;
     getEffectCurrentPosition: (soundId: number) => Promise<number>;
 }
+
+export interface PCMProxy {
+    connect: (mediaElement: HTMLMediaElement) => MediaElementAudioSourceNode;
+}

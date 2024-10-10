@@ -6,7 +6,7 @@ import type { VideoJsPlayer } from "video.js";
 
 import { defaultAttributes, Version } from "../constants";
 import { options } from "../options";
-import type { Props, Attributes, Keys, RTCEffectClient } from "../types";
+import type { Props, Attributes, Keys, RTCEffectClient, PCMProxy } from "../types";
 import { AudioExts, checkWhiteWebSdkVersion, getCurrentTime, isiOS, isSafari, nextFrame } from "../utils";
 import PlayerController from "./PlayerController";
 import setupRTCEffectMixing from "./RTCEffectPlugin";
@@ -61,6 +61,7 @@ class MediaPlayerImpl extends Component<ImplProps, State> {
     decreaseRetryTimer = 0;
     noSoundSyncCount = 0;
     everPlayed = false;
+    audioSource?: MediaElementAudioSourceNode;
 
     constructor(props: ImplProps) {
         super(props);
@@ -321,6 +322,7 @@ class MediaPlayerImpl extends Component<ImplProps, State> {
 
         const video = document.createElement("video");
         video.className = "video-js";
+        video.crossOrigin = "anonymous";
         poster && (video.poster = poster);
 
         video.setAttribute("playsInline", "");
@@ -354,6 +356,24 @@ class MediaPlayerImpl extends Component<ImplProps, State> {
         if (rtcAudioEffectClient !== undefined) {
             setupRTCEffectMixing(rtcAudioEffectClient, player, src);
         }
+
+        // Native pcm proxy.
+        const pcmDataClient: PCMProxy = (window as any).__pcmProxy;
+        if (pcmDataClient !== undefined) {
+            player.one("play", () => {
+                const source = pcmDataClient.connect(video);
+                this.audioSource = source;
+                this.debug("Connect to PCMProxy ", src);
+            });
+            player.one("dispose", () => {
+                if (this.audioSource) {
+                    this.audioSource.disconnect();
+                    this.audioSource = undefined;
+                    this.debug("Disconnect from PCMProxy", src);
+                }
+            });
+        }
+
 
         player.on("ready", () => {
             options.onPlayer?.(player);
