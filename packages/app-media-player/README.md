@@ -22,6 +22,10 @@ manager.addApp({
 
 ## Changelog
 
+## 0.1.4
+
+- iOS PCM 混音后台行为修复。
+
 ## 0.1.3
 
 - iOS PCM 混音代理。
