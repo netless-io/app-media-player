@@ -38,6 +38,22 @@ const NetlessAppMediaPlayer: NetlessApp<Attributes> = {
             console.log("[MediaPlayer]: destroy");
             ReactDOM.unmountComponentAtNode(container);
         });
+
+        if ((window as any).__pcmProxy) {
+            const visibilityHandler = () => {
+                if (document.visibilityState === "hidden") {
+                    console.log("[MediaPlayer]: visibilitychange -> hidden. unmount for pcmproxy");
+                    ReactDOM.unmountComponentAtNode(container);
+                } else {
+                    console.log("[MediaPlayer]: visibilitychange -> visible. mount for pcmproxy");
+                    ReactDOM.render(<MediaPlayer context={context} />, container);
+                }
+            };
+            document.addEventListener("visibilitychange", visibilityHandler);
+            context.emitter.on("destroy", () => {
+                document.removeEventListener("visibilitychange", visibilityHandler);
+            });
+        }
     },
 };
 
