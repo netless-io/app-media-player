@@ -3,7 +3,7 @@ import type { Attributes } from "./types";
 /** 插件 ID */
 export const Kind = "MediaPlayer";
 
-export const Version = "0.1.0-alpha.5";
+export const Version = "0.1.5-beta.0";
 
 export const defaultAttributes: Attributes = {
     src: "",
