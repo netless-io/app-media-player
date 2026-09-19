@@ -13,7 +13,7 @@ import setupRTCEffectMixing from "./RTCEffectPlugin";
 
 export class MediaPlayer extends Component<Props> {
     render() {
-        const { context } = this.props;
+        const { context, onPlayerReady } = this.props;
         const room = context.getRoom();
         const player = room ? undefined : (context.getDisplayer() as Player);
         const putAttributes = this.putAttributes;
@@ -23,6 +23,7 @@ export class MediaPlayer extends Component<Props> {
                 player={player}
                 context={context}
                 plugin={{ putAttributes }}
+                onPlayerReady={onPlayerReady}
             />
         );
     }
@@ -42,6 +43,7 @@ export interface ImplProps {
     player?: Player;
     context: AppContext<Attributes>;
     plugin: { putAttributes(attrs: any): void };
+    onPlayerReady?: (player: VideoJsPlayer | null) => void;
 }
 
 interface State {
@@ -62,6 +64,11 @@ class MediaPlayerImpl extends Component<ImplProps, State> {
     noSoundSyncCount = 0;
     everPlayed = false;
     audioSource?: MediaElementAudioSourceNode;
+    // Cancel token: bumped on unmount (and on every initPlayer run). An
+    // in-flight async initPlayer compares it after each await and aborts
+    // instead of writing into an unmounted DOM.
+    private initToken = 0;
+    private readyDelivered = false;
 
     constructor(props: ImplProps) {
         super(props);
@@ -201,6 +208,13 @@ class MediaPlayerImpl extends Component<ImplProps, State> {
 
     componentWillUnmount() {
         this.debug("unmount");
+        // Cancel an in-flight async initPlayer and settle the ready callback
+        // so WindowManager's serial setup queue is never left waiting.
+        this.initToken += 1;
+        if (!this.readyDelivered) {
+            this.readyDelivered = true;
+            this.props.onPlayerReady?.(null);
+        }
         this.props.context.emitter.off("attributesUpdate", this.syncPlayerWithAttributes);
         this.player?.dispose();
         clearInterval(this.syncPlayerTimer);
@@ -311,6 +325,9 @@ class MediaPlayerImpl extends Component<ImplProps, State> {
     };
 
     initPlayer = async () => {
+        const token = ++this.initToken;
+        const isCancelled = () => token !== this.initToken;
+
         this.player?.dispose();
         this.player = undefined;
 
@@ -343,9 +360,22 @@ class MediaPlayerImpl extends Component<ImplProps, State> {
 
         // NOTE: don't remove this line!
         await nextFrame();
+        if (isCancelled()) {
+            // Unmounted (or re-initialized) while waiting for a frame: drop
+            // the partial DOM instead of initializing video.js on it.
+            wrapper.remove();
+            this.debug("initPlayer cancelled after first frame");
+            return;
+        }
 
         this.debug("initializing videojs() ...");
         const player = videojs(video);
+        if (isCancelled()) {
+            player.dispose();
+            wrapper.remove();
+            this.debug("initPlayer cancelled after videojs()");
+            return;
+        }
         this.player = player;
         (window as any).player = player;
 
@@ -377,6 +407,13 @@ class MediaPlayerImpl extends Component<ImplProps, State> {
 
         player.on("ready", () => {
             options.onPlayer?.(player);
+            // Deliberately delivered only once per component lifetime: a
+            // catchPlayFail retry creates a new player, but the setup queue
+            // only needs the first ready signal.
+            if (!this.readyDelivered) {
+                this.readyDelivered = true;
+                this.props.onPlayerReady?.(player);
+            }
 
             player.on("timeupdate", this.gracefullyUpdate);
             player.on("volumechange", this.gracefullyUpdate);

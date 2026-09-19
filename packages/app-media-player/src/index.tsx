@@ -7,6 +7,7 @@ import { MediaPlayer } from "./components/MediaPlayer";
 import styles from "./style.css?inline";
 
 import { defaultAttributes, Kind } from "./constants";
+import { options, setOptions } from "./options";
 import type { Attributes } from "./types";
 
 export { setOptions } from "./options";
@@ -15,6 +16,31 @@ export { Version } from "./constants";
 export type { Attributes as NetlessAppMediaPlayerAttributes };
 
 const teardownByContext = new WeakMap<object, () => void>();
+
+const DEFAULT_SETUP_READY_TIMEOUT = 5_000;
+
+/**
+ * Wait until the video.js player instance is created (or the component
+ * unmounts). A timeout resolves anyway so a slow media source never blocks
+ * WindowManager's serial setup queue.
+ */
+const waitForPlayerReady = (playerReady: Promise<unknown>, timeoutMs: number): Promise<void> =>
+  new Promise<void>(resolve => {
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(() => {
+      console.warn(
+        `[MediaPlayer]: setup ready wait timed out after ${timeoutMs}ms, keeping loading in background`
+      );
+      settle();
+    }, timeoutMs);
+    playerReady.then(settle, settle);
+  });
 
 const NetlessAppMediaPlayer: NetlessApp<Attributes> & {
   teardown(context: import("@netless/window-manager").AppContext<Attributes>): void;
@@ -34,7 +60,18 @@ const NetlessAppMediaPlayer: NetlessApp<Attributes> & {
 
     const container = document.createElement("div");
     container.classList.add("netless-app-media-player-container");
-    ReactDOM.render(<MediaPlayer context={context} />, container);
+
+    // Serial setup queue support: resolve setup once the video.js player
+    // instance exists (or the component unmounted / the wait timed out).
+    let resolvePlayerReady!: (player: unknown) => void;
+    const playerReady = new Promise<unknown>(resolve => {
+      resolvePlayerReady = resolve;
+    });
+
+    ReactDOM.render(
+      <MediaPlayer context={context} onPlayerReady={resolvePlayerReady} />,
+      container,
+    );
 
     box.mountContent(container);
 
@@ -64,7 +101,10 @@ const NetlessAppMediaPlayer: NetlessApp<Attributes> & {
           console.log(
             "[MediaPlayer]: visibilitychange -> visible. mount for pcmproxy",
           );
-          ReactDOM.render(<MediaPlayer context={context} />, container);
+          ReactDOM.render(
+            <MediaPlayer context={context} onPlayerReady={resolvePlayerReady} />,
+            container,
+          );
         }
       };
       document.addEventListener("visibilitychange", visibilityHandler);
@@ -80,6 +120,18 @@ const NetlessAppMediaPlayer: NetlessApp<Attributes> & {
     } else {
       teardownByContext.set(context, teardown);
     }
+
+    // Older WindowManager declarations model setup as synchronous even though
+    // AppProxy awaits its result. Keep that source compatibility.
+    // Timeout precedence: per-app AppOptions > global setOptions() > default.
+    // getAppOptions is accessed defensively: older @netless/window-manager
+    // typings/runtime may not expose it.
+    const appOptions = (context as any).getAppOptions?.() as
+      | { setupReadyTimeout?: number }
+      | undefined;
+    const setupReadyTimeout =
+      appOptions?.setupReadyTimeout ?? options.setupReadyTimeout ?? DEFAULT_SETUP_READY_TIMEOUT;
+    return waitForPlayerReady(playerReady, setupReadyTimeout) as unknown as void;
   },
   teardown(context) {
     teardownByContext.get(context)?.();

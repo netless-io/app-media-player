@@ -1,8 +1,14 @@
 import type { AppContext } from "@netless/window-manager";
 import type { EventEmitter } from "white-web-sdk";
+import type { VideoJsPlayer } from "video.js";
 
 export interface Props {
     context: AppContext<Attributes>;
+    /**
+     * Serial setup queue support: called once the video.js player instance is
+     * created, or with `null` when the component unmounts before that.
+     */
+    onPlayerReady?: (player: VideoJsPlayer | null) => void;
 }
 
 export interface Attributes {

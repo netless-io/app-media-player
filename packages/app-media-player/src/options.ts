@@ -38,6 +38,14 @@ export interface MediaPlayerOptions {
      * 是否 log
      */
     verbose: boolean;
+
+    /**
+     * Max time (ms) `setup()` waits for the video.js player instance before
+     * resolving anyway (loading continues in background). Also settable
+     * per-app via AppOptions `setupReadyTimeout`, which takes precedence.
+     * @default 5000
+     */
+    setupReadyTimeout?: number;
 }
 
 export const defaultOptions: MediaPlayerOptions = {
