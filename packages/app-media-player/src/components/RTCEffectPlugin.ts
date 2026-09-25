@@ -1,4 +1,4 @@
-import { options } from "../options";
+import { debug as logDebug, report } from "../logger";
 import { RTCEffectClient } from "../types";
 import type { VideoJsPlayer } from "video.js";
 import { AudioExts } from "../utils";
@@ -32,13 +32,8 @@ interface RTCEffectState {
     previousBeginSeekTime: number;
 }
 
-function debug(msg: string, ...args: any[]) {
-    if (options.verbose) {
-        console.log(`[RTCEffect] ${msg}`, ...args);
-    }
-}
-
-export default function setupRTCEffectMixing(rtcAudioEffectClient: RTCEffectClient, player: VideoJsPlayer, src: string) {
+export default function setupRTCEffectMixing(rtcAudioEffectClient: RTCEffectClient, player: VideoJsPlayer, src: string, room?: unknown) {
+    const debug = (msg: string, ...args: any[]) => logDebug(room, "RTCEffect", msg, ...args);
     function playEffectId(playingId: number) {
         if (activeRTCEffectStates[playingId].playState !== RTCEffectPlayState.Idle) {
             debug(">>> Skip Play", { playingId, state: activeRTCEffectStates[playingId].playState });
@@ -77,7 +72,7 @@ export default function setupRTCEffectMixing(rtcAudioEffectClient: RTCEffectClie
         // rtcAudioEffectClient.preloadEffect(playingId, src, 0);
 
         rtcAudioEffectClient.addListener("error", (soundId) => {
-            debug(">>> Error", { soundId });
+            report(room, "error", "[RTCEffect] playback error", soundId);
             resetEffectState(soundId);
         });
         rtcAudioEffectClient.addListener('effectFinished', (soundId: number) => {

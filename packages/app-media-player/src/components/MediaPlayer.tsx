@@ -6,6 +6,7 @@ import type { VideoJsPlayer } from "video.js";
 
 import { defaultAttributes, Version } from "../constants";
 import { options } from "../options";
+import { debug, report } from "../logger";
 import type { Props, Attributes, Keys, RTCEffectClient, PCMProxy } from "../types";
 import { AudioExts, checkWhiteWebSdkVersion, getCurrentTime, isiOS, isSafari, nextFrame } from "../utils";
 import PlayerController from "./PlayerController";
@@ -154,9 +155,7 @@ class MediaPlayerImpl extends Component<ImplProps, State> {
     }
 
     debug(msg: string, ...args: any[]) {
-        if (options.verbose) {
-            options.log(`[MediaPlayer] ${msg}`, ...args);
-        }
+        debug(this.props.room, "MediaPlayer", msg, ...args);
     }
 
     showController = () => {
@@ -303,14 +302,16 @@ class MediaPlayerImpl extends Component<ImplProps, State> {
             const mediaError = this.player?.error();
             if (mediaError) {
                 if (this.retryCount <= 3) {
+                    report(this.props.room, "warn", "[MediaPlayer] retrying after playback failure", err, mediaError);
                     this.initPlayer();
                     this.retryCount = this.retryCount + 1;
                 } else {
-                    this.debug("catch videojs media error", mediaError);
+                    report(this.props.room, "error", "[MediaPlayer] playback failed after retries", err, mediaError);
                     this.setState({ MediaError: true });
                 }
+            } else {
+                report(this.props.room, "warn", "[MediaPlayer] playback failed", err);
             }
-            this.debug("catch error", err);
         }
     };
 
@@ -384,7 +385,7 @@ class MediaPlayerImpl extends Component<ImplProps, State> {
         // Native RTC effect mixing check.
         const rtcAudioEffectClient: RTCEffectClient = (window as any).__mediaPlayerAudioEffectClient;
         if (rtcAudioEffectClient !== undefined) {
-            setupRTCEffectMixing(rtcAudioEffectClient, player, src);
+            setupRTCEffectMixing(rtcAudioEffectClient, player, src, this.props.room);
         }
 
         // Native pcm proxy.

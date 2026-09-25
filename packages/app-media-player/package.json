@@ -20,6 +20,7 @@
         "dist"
     ],
     "scripts": {
+        "test": "esbuild test/logger.test.ts --bundle --platform=node --format=cjs --outfile=test/.cache/logger.test.js && node --test test/.cache/logger.test.js",
         "types": "cross-env NODE_ENV=production tsc --declaration --emitDeclarationOnly --outDir dist",
         "build": "vite build && yarn run types",
         "build:dev": "vite build --mode development && yarn run types",

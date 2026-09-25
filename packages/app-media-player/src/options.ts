@@ -30,9 +30,9 @@ export interface MediaPlayerOptions {
     onPlayer?: (player: VideoJsPlayer) => void;
 
     /**
-     * 自定义 log 函数
+     * 自定义 log 函数；未设置时 verbose 日志写入 room.logger.info
      */
-    log: Console["log"];
+    log?: Console["log"];
 
     /**
      * 是否 log
@@ -53,7 +53,6 @@ export const defaultOptions: MediaPlayerOptions = {
     syncInterval: 1000,
     retryInterval: 15000,
     verbose: false,
-    log: console.log.bind(console),
 };
 
 export let options = defaultOptions;

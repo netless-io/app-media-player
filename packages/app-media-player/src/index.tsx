@@ -8,6 +8,7 @@ import styles from "./style.css?inline";
 
 import { defaultAttributes, Kind } from "./constants";
 import { options, setOptions } from "./options";
+import { report } from "./logger";
 import type { Attributes } from "./types";
 
 export { setOptions } from "./options";
@@ -24,7 +25,7 @@ const DEFAULT_SETUP_READY_TIMEOUT = 5_000;
  * unmounts). A timeout resolves anyway so a slow media source never blocks
  * WindowManager's serial setup queue.
  */
-const waitForPlayerReady = (playerReady: Promise<unknown>, timeoutMs: number): Promise<void> =>
+const waitForPlayerReady = (playerReady: Promise<unknown>, timeoutMs: number, room: unknown): Promise<void> =>
   new Promise<void>(resolve => {
     let settled = false;
     const settle = () => {
@@ -34,7 +35,7 @@ const waitForPlayerReady = (playerReady: Promise<unknown>, timeoutMs: number): P
       resolve();
     };
     const timer = setTimeout(() => {
-      console.warn(
+      report(room, "warn",
         `[MediaPlayer]: setup ready wait timed out after ${timeoutMs}ms, keeping loading in background`
       );
       settle();
@@ -49,8 +50,10 @@ const NetlessAppMediaPlayer: NetlessApp<Attributes> & {
   setup(context) {
     let attrs = context.getAttributes();
     if (!attrs || !attrs.src) {
+      const error = new Error(`[MediaPlayer]: Missing 'attributes'.'src'.`);
+      report(context.getRoom(), "error", error.message, error);
       return context.emitter.emit("destroy", {
-        error: new Error(`[MediaPlayer]: Missing 'attributes'.'src'.`),
+        error,
       });
     }
     attrs = { ...defaultAttributes, ...attrs };
@@ -83,7 +86,6 @@ const NetlessAppMediaPlayer: NetlessApp<Attributes> & {
       const removeDestroy = offDestroy;
       offDestroy = undefined;
       removeDestroy?.();
-      console.log("[MediaPlayer]: destroy");
       ReactDOM.unmountComponentAtNode(container);
     };
     offDestroy = context.emitter.on("destroy", teardown);
@@ -93,14 +95,8 @@ const NetlessAppMediaPlayer: NetlessApp<Attributes> & {
       offDestroy = undefined;
       const visibilityHandler = () => {
         if (document.visibilityState === "hidden") {
-          console.log(
-            "[MediaPlayer]: visibilitychange -> hidden. unmount for pcmproxy",
-          );
           ReactDOM.unmountComponentAtNode(container);
         } else {
-          console.log(
-            "[MediaPlayer]: visibilitychange -> visible. mount for pcmproxy",
-          );
           ReactDOM.render(
             <MediaPlayer context={context} onPlayerReady={resolvePlayerReady} />,
             container,
@@ -131,7 +127,7 @@ const NetlessAppMediaPlayer: NetlessApp<Attributes> & {
       | undefined;
     const setupReadyTimeout =
       appOptions?.setupReadyTimeout ?? options.setupReadyTimeout ?? DEFAULT_SETUP_READY_TIMEOUT;
-    return waitForPlayerReady(playerReady, setupReadyTimeout) as unknown as void;
+    return waitForPlayerReady(playerReady, setupReadyTimeout, context.getRoom()) as unknown as void;
   },
   teardown(context) {
     teardownByContext.get(context)?.();
