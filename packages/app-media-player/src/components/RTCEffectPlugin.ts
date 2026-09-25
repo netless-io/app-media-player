@@ -1,4 +1,5 @@
 import { debug as logDebug, report } from "../logger";
+import type { AppContext } from "@netless/window-manager";
 import { RTCEffectClient } from "../types";
 import type { VideoJsPlayer } from "video.js";
 import { AudioExts } from "../utils";
@@ -32,8 +33,8 @@ interface RTCEffectState {
     previousBeginSeekTime: number;
 }
 
-export default function setupRTCEffectMixing(rtcAudioEffectClient: RTCEffectClient, player: VideoJsPlayer, src: string, room?: unknown) {
-    const debug = (msg: string, ...args: any[]) => logDebug(room, "RTCEffect", msg, ...args);
+export default function setupRTCEffectMixing(rtcAudioEffectClient: RTCEffectClient, player: VideoJsPlayer, src: string, context: AppContext<any>) {
+    const debug = (msg: string, ...args: any[]) => logDebug(context, "RTCEffect", msg, ...args);
     function playEffectId(playingId: number) {
         if (activeRTCEffectStates[playingId].playState !== RTCEffectPlayState.Idle) {
             debug(">>> Skip Play", { playingId, state: activeRTCEffectStates[playingId].playState });
@@ -47,10 +48,12 @@ export default function setupRTCEffectMixing(rtcAudioEffectClient: RTCEffectClie
     }
 
     function resetEffectState(playingId: number) {
-        activeRTCEffectStates[playingId].playState = RTCEffectPlayState.Idle;
-        activeRTCEffectStates[playingId].previousVideoJSAdvance = 0;
-        activeRTCEffectStates[playingId].previousSeekTargetTime = 0;
-        activeRTCEffectStates[playingId].previousBeginSeekTime = 0;
+        const state = activeRTCEffectStates[playingId];
+        if (!state) return;
+        state.playState = RTCEffectPlayState.Idle;
+        state.previousVideoJSAdvance = 0;
+        state.previousSeekTargetTime = 0;
+        state.previousBeginSeekTime = 0;
     }
 
     player.one("ready", () => {
@@ -71,14 +74,18 @@ export default function setupRTCEffectMixing(rtcAudioEffectClient: RTCEffectClie
         // Can't preload media due to the limitation of native rtc effect so far.
         // rtcAudioEffectClient.preloadEffect(playingId, src, 0);
 
-        rtcAudioEffectClient.addListener("error", (soundId) => {
-            report(room, "error", "[RTCEffect] playback error", soundId);
+        const onEffectError = (soundId: number) => {
+            if (soundId !== playingId) return;
+            report(context, "error", "[RTCEffect] playback error", soundId);
             resetEffectState(soundId);
-        });
-        rtcAudioEffectClient.addListener('effectFinished', (soundId: number) => {
+        };
+        const onEffectFinished = (soundId: number) => {
+            if (soundId !== playingId) return;
             debug(">>> Finished", { soundId });
             resetEffectState(soundId);
-        });
+        };
+        rtcAudioEffectClient.addListener("error", onEffectError);
+        rtcAudioEffectClient.addListener("effectFinished", onEffectFinished);
         player.on("play", () => {
             const currenState = activeRTCEffectStates[playingId].playState;
             switch (currenState) {
@@ -136,11 +143,13 @@ export default function setupRTCEffectMixing(rtcAudioEffectClient: RTCEffectClie
         // });
         player.on("timeupdate", () => { // RTC native clien time unit is millisecond. JS player time unit is second.
             const state = activeRTCEffectStates[playingId];
+            if (!state) return;
             // debug(">>> timeupdate", { playingId, state: state.playState, jsSecond: player.currentTime() });
             rtcAudioEffectClient
                 .getEffectCurrentPosition(playingId)
                 .then((rtcEffectMSTime: number) => {
                     const state = activeRTCEffectStates[playingId];
+                    if (!state) return;
                     const rtcEffectTime = rtcEffectMSTime / 1000;
                     const jsPlayerTime = player.currentTime();
                     const isSeeking = state.previousSeekTargetTime !== 0 && state.previousBeginSeekTime !== 0;
@@ -214,13 +223,15 @@ export default function setupRTCEffectMixing(rtcAudioEffectClient: RTCEffectClie
                 });
         });
         player.on("dispose", () => {
-            const currentState = activeRTCEffectStates[playingId].playState;
+            rtcAudioEffectClient.removeListener("error", onEffectError);
+            rtcAudioEffectClient.removeListener("effectFinished", onEffectFinished);
+            const currentState = activeRTCEffectStates[playingId]?.playState;
             if (currentState) {
                 rtcAudioEffectClient.stopEffect(playingId);
                 // rtcAudioEffectClient.unloadEffect(playingId);
-                delete activeRTCEffectStates[playingId];
-                debug(">>> Dispose", { playingId });
             }
+            delete activeRTCEffectStates[playingId];
+            debug(">>> Dispose", { playingId });
         });
     });
 }

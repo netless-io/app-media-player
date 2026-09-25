@@ -155,7 +155,7 @@ class MediaPlayerImpl extends Component<ImplProps, State> {
     }
 
     debug(msg: string, ...args: any[]) {
-        debug(this.props.room, "MediaPlayer", msg, ...args);
+        debug(this.props.context, "MediaPlayer", msg, ...args);
     }
 
     showController = () => {
@@ -302,15 +302,15 @@ class MediaPlayerImpl extends Component<ImplProps, State> {
             const mediaError = this.player?.error();
             if (mediaError) {
                 if (this.retryCount <= 3) {
-                    report(this.props.room, "warn", "[MediaPlayer] retrying after playback failure", err, mediaError);
+                    report(this.props.context, "warn", "[MediaPlayer] retrying after playback failure", err, mediaError);
                     this.initPlayer();
                     this.retryCount = this.retryCount + 1;
                 } else {
-                    report(this.props.room, "error", "[MediaPlayer] playback failed after retries", err, mediaError);
+                    report(this.props.context, "error", "[MediaPlayer] playback failed after retries", err, mediaError);
                     this.setState({ MediaError: true });
                 }
             } else {
-                report(this.props.room, "warn", "[MediaPlayer] playback failed", err);
+                report(this.props.context, "warn", "[MediaPlayer] playback failed", err);
             }
         }
     };
@@ -385,7 +385,7 @@ class MediaPlayerImpl extends Component<ImplProps, State> {
         // Native RTC effect mixing check.
         const rtcAudioEffectClient: RTCEffectClient = (window as any).__mediaPlayerAudioEffectClient;
         if (rtcAudioEffectClient !== undefined) {
-            setupRTCEffectMixing(rtcAudioEffectClient, player, src, this.props.room);
+            setupRTCEffectMixing(rtcAudioEffectClient, player, src, this.props.context);
         }
 
         // Native pcm proxy.

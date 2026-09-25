@@ -9,6 +9,7 @@ import styles from "./style.css?inline";
 import { defaultAttributes, Kind } from "./constants";
 import { options, setOptions } from "./options";
 import { report } from "./logger";
+import { waitForPlayerReady } from "./setup-ready";
 import type { Attributes } from "./types";
 
 export { setOptions } from "./options";
@@ -20,29 +21,6 @@ const teardownByContext = new WeakMap<object, () => void>();
 
 const DEFAULT_SETUP_READY_TIMEOUT = 5_000;
 
-/**
- * Wait until the video.js player instance is created (or the component
- * unmounts). A timeout resolves anyway so a slow media source never blocks
- * WindowManager's serial setup queue.
- */
-const waitForPlayerReady = (playerReady: Promise<unknown>, timeoutMs: number, room: unknown): Promise<void> =>
-  new Promise<void>(resolve => {
-    let settled = false;
-    const settle = () => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      resolve();
-    };
-    const timer = setTimeout(() => {
-      report(room, "warn",
-        `[MediaPlayer]: setup ready wait timed out after ${timeoutMs}ms, keeping loading in background`
-      );
-      settle();
-    }, timeoutMs);
-    playerReady.then(settle, settle);
-  });
-
 const NetlessAppMediaPlayer: NetlessApp<Attributes> & {
   teardown(context: import("@netless/window-manager").AppContext<Attributes>): void;
 } = {
@@ -51,7 +29,7 @@ const NetlessAppMediaPlayer: NetlessApp<Attributes> & {
     let attrs = context.getAttributes();
     if (!attrs || !attrs.src) {
       const error = new Error(`[MediaPlayer]: Missing 'attributes'.'src'.`);
-      report(context.getRoom(), "error", error.message, error);
+      report(context, "error", error.message, error);
       return context.emitter.emit("destroy", {
         error,
       });
@@ -64,8 +42,8 @@ const NetlessAppMediaPlayer: NetlessApp<Attributes> & {
     const container = document.createElement("div");
     container.classList.add("netless-app-media-player-container");
 
-    // Serial setup queue support: resolve setup once the video.js player
-    // instance exists (or the component unmounted / the wait timed out).
+    // Serial setup queue support: new lazy hosts await the player; legacy
+    // hosts keep the bounded wait after a warning.
     let resolvePlayerReady!: (player: unknown) => void;
     const playerReady = new Promise<unknown>(resolve => {
       resolvePlayerReady = resolve;
@@ -127,7 +105,7 @@ const NetlessAppMediaPlayer: NetlessApp<Attributes> & {
       | undefined;
     const setupReadyTimeout =
       appOptions?.setupReadyTimeout ?? options.setupReadyTimeout ?? DEFAULT_SETUP_READY_TIMEOUT;
-    return waitForPlayerReady(playerReady, setupReadyTimeout, context.getRoom()) as unknown as void;
+    return waitForPlayerReady(playerReady, setupReadyTimeout, context) as unknown as void;
   },
   teardown(context) {
     teardownByContext.get(context)?.();
